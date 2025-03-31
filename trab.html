@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Algoritmos de Busca</title>
+    <style>
+      :root {
+        --primary-color: #3498db;
+        --secondary-color: #2980b9;
+        --background-color: #f9f9f9;
+        --card-color: #ffffff;
+        --text-color: #333333;
+        --border-color: #e0e0e0;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background-color: var(--background-color);
+        color: var(--text-color);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background-color: var(--card-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: var(--primary-color);
+        margin-bottom: 15px;
+      }
+
+      h1 {
+        text-align: center;
+        grid-column: 1 / -1;
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 10px;
+      }
+
+      select,
+      button {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 16px;
+      }
+
+      button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      button:hover {
+        background-color: var(--secondary-color);
+      }
+
+      .results {
+        margin-top: 15px;
+        border-top: 1px solid var(--border-color);
+        padding-top: 15px;
+      }
+
+      #output {
+        white-space: pre-wrap;
+        background-color: #f5f5f5;
+        padding: 15px;
+        border-radius: 4px;
+        border-left: 4px solid var(--primary-color);
+        overflow-y: auto;
+        max-height: 400px;
+        font-family: monospace;
+      }
+
+      #map {
+        height: 500px;
+        background-color: #e9e9e9;
+        border-radius: 8px;
+        position: relative;
+      }
+
+      .city {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background-color: red;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .city-label {
+        position: absolute;
+        font-size: 12px;
+        white-space: nowrap;
+        transform: translate(-50%, -100%);
+        margin-top: -5px;
+        background-color: rgba(255, 255, 255, 0.7);
+        padding: 2px 5px;
+        border-radius: 2px;
+      }
+
+      .path-line {
+        position: absolute;
+        background-color: #3498db;
+        height: 3px;
+        transform-origin: 0 50%;
+        z-index: 1;
+      }
+
+      .loading {
+        display: none;
+        margin: 15px 0;
+        text-align: center;
+        color: var(--primary-color);
+      }
+
+      .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-left-color: var(--primary-color);
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 10px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .options-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Algoritmos de Busca</h1>
+
+      <!-- Configurações -->
+      <div class="card">
+        <h2>Configurações</h2>
+
+        <div class="options-grid">
+          <div>
+            <h3>Cidade de Origem</h3>
+            <select id="origem">
+              <!-- Preenchido via JavaScript -->
+            </select>
+          </div>
+
+          <div>
+            <h3>Cidade de Destino</h3>
+            <select id="destino">
+              <!-- Preenchido via JavaScript -->
+            </select>
+          </div>
+        </div>
+
+        <h3>Algoritmo de Busca</h3>
+        <select id="algoritmo">
+          <option value="1">Busca em Extensão (Amplitude)</option>
+          <option value="2">Busca de Custo Uniforme</option>
+          <option value="3">Busca em Profundidade</option>
+          <option value="4">Busca em Profundidade Limitada</option>
+          <option value="5">Busca de Aprofundamento Iterativo</option>
+
+          <option value="7">Busca Gulosa</option>
+          <option value="8">Algoritmo A*</option>
+          <option value="9">Executar todas as estratégias</option>
+        </select>
+
+        <div id="opcoes-extras" style="display: none">
+          <h3>Limite de Profundidade</h3>
+          <input type="number" id="limite" value="5" min="1" max="20" />
+        </div>
+
+        <button id="buscar">Buscar Caminho</button>
+
+        <div class="loading" id="loading">
+          <span class="spinner"></span> Processando...
+        </div>
+
+        <div class="results">
+          <h3>Resultados</h3>
+          <div id="output">
+            Selecione as cidades e o algoritmo para iniciar a busca.
+          </div>
+        </div>
+      </div>
+
+      <!-- Mapa -->
+      <div class="card">
+        <h2>Mapa de Rotas</h2>
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <script>
+      // Definição do grafo com as cidades e distâncias
+      const grafo = {
+        Arad: { Zerind: 75, Sibiu: 140, Timisoara: 118 },
+        Zerind: { Arad: 75, Oradea: 71 },
+        Oradea: { Zerind: 71, Sibiu: 151 },
+        Sibiu: { Arad: 140, Oradea: 151, Fagaras: 99, "Rimnicu Vilcea": 80 },
+        Timisoara: { Arad: 118, Lugoj: 111 },
+        Lugoj: { Timisoara: 111, Mehadia: 70 },
+        Mehadia: { Lugoj: 70, Drobeta: 75 },
+        Drobeta: { Mehadia: 75, Craiova: 120 },
+        Craiova: { Drobeta: 120, "Rimnicu Vilcea": 146, Pitesti: 138 },
+        "Rimnicu Vilcea": { Sibiu: 80, Craiova: 146, Pitesti: 97 },
+        Fagaras: { Sibiu: 99, Bucharest: 211 },
+        Pitesti: { "Rimnicu Vilcea": 97, Craiova: 138, Bucharest: 101 },
+        Bucharest: { Fagaras: 211, Pitesti: 101, Giurgiu: 90, Urziceni: 85 },
+        Giurgiu: { Bucharest: 90 },
+        Urziceni: { Bucharest: 85, Hirsova: 98, Vaslui: 142 },
+        Hirsova: { Urziceni: 98, Eforie: 86 },
+        Eforie: { Hirsova: 86 },
+        Vaslui: { Urziceni: 142, Iasi: 92 },
+        Iasi: { Vaslui: 92, Neamt: 87 },
+        Neamt: { Iasi: 87 },
+      };
+
+      // Coordenadas normalizadas para o mapa (ajustadas para o tamanho do div do mapa)
+      const coordenadas = {
+        Arad: [91, 492],
+        Zerind: [108, 531],
+        Oradea: [131, 570],
+        Sibiu: [253, 488],
+        Fagaras: [368, 460],
+        Timisoara: [165, 392],
+        Lugoj: [278, 353],
+        Mehadia: [281, 279],
+        Drobeta: [252, 240],
+        Craiova: [322, 215],
+        "Rimnicu Vilcea": [317, 396],
+        Pitesti: [371, 324],
+        Bucharest: [441, 244],
+        Giurgiu: [446, 157],
+        Urziceni: [534, 244],
+        Hirsova: [637, 261],
+        Eforie: [722, 233],
+        Vaslui: [642, 360],
+        Iasi: [599, 456],
+        Neamt: [509, 506],
+      };
+
+      const heuristicasDiretas = {
+        Arad: 366,
+        Bucharest: 0,
+        Craiova: 160,
+        Drobeta: 242,
+        Eforie: 161,
+        Fagaras: 176,
+        Giurgiu: 77,
+        Hirsova: 151,
+        Iasi: 226,
+        Lugoj: 244,
+        Mehadia: 241,
+        Neamt: 234,
+        Oradea: 380,
+        Pitesti: 100,
+        "Rimnicu Vilcea": 193,
+        Sibiu: 253,
+        Timisoara: 329,
+        Urziceni: 80,
+        Vaslui: 199,
+        Zerind: 374,
+      };
+
+      // Função para normalizar as coordenadas para o tamanho do mapa
+      function normalizarCoordenadas() {
+        const mapWidth = document.getElementById("map").offsetWidth;
+        const mapHeight = document.getElementById("map").offsetHeight;
+
+        // Encontrar os valores mínimos e máximos das coordenadas originais
+        let minX = Infinity,
+          minY = Infinity,
+          maxX = -Infinity,
+          maxY = -Infinity;
+
+        for (const cidade in coordenadas) {
+          const [x, y] = coordenadas[cidade];
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+
+        // Padding para evitar que as cidades fiquem muito na borda
+        const padding = 30;
+
+        // Normalizar as coordenadas para o tamanho do mapa
+        const coordenadasNormalizadas = {};
+
+        for (const cidade in coordenadas) {
+          const [x, y] = coordenadas[cidade];
+          const xNormalizado =
+            padding + ((x - minX) / (maxX - minX)) * (mapWidth - 2 * padding);
+          const yNormalizado =
+            padding + ((y - minY) / (maxY - minY)) * (mapHeight - 2 * padding);
+          coordenadasNormalizadas[cidade] = [xNormalizado, yNormalizado];
+        }
+
+        return coordenadasNormalizadas;
+      }
+
+      // Inicializar a interface
+      document.addEventListener("DOMContentLoaded", function () {
+        const origemSelect = document.getElementById("origem");
+        const destinoSelect = document.getElementById("destino");
+        const algoritmoSelect = document.getElementById("algoritmo");
+        const limiteInput = document.getElementById("limite");
+        const opcoesExtras = document.getElementById("opcoes-extras");
+        const buscarBtn = document.getElementById("buscar");
+        const outputDiv = document.getElementById("output");
+        const mapDiv = document.getElementById("map");
+        const loadingDiv = document.getElementById("loading");
+
+        // Preencher os selects de origem e destino
+        const cidades = Object.keys(grafo).sort();
+
+        cidades.forEach((cidade) => {
+          const optionOrigem = document.createElement("option");
+          optionOrigem.value = cidade;
+          optionOrigem.textContent = cidade;
+          origemSelect.appendChild(optionOrigem);
+
+          const optionDestino = document.createElement("option");
+          optionDestino.value = cidade;
+          optionDestino.textContent = cidade;
+          destinoSelect.appendChild(optionDestino);
+        });
+
+        // Definir valores iniciais diferentes
+        origemSelect.value = "Arad";
+        destinoSelect.value = "Bucharest";
+
+        // Mostrar opções extras para algoritmos específicos
+        algoritmoSelect.addEventListener("change", function () {
+          const algoritmo = this.value;
+
+          if (algoritmo === "4" || algoritmo === "5") {
+            opcoesExtras.style.display = "block";
+          } else {
+            opcoesExtras.style.display = "none";
+          }
+        });
+
+        // Desenhar o mapa inicial
+        desenharMapa();
+
+        // Botão de busca
+        buscarBtn.addEventListener("click", function () {
+          const origem = origemSelect.value;
+          const destino = destinoSelect.value;
+          const algoritmo = algoritmoSelect.value;
+          const limite = parseInt(limiteInput.value);
+
+          if (origem === destino) {
+            alert("As cidades de origem e destino devem ser diferentes.");
+            return;
+          }
+
+          // Simulação de processamento do backend
+          loadingDiv.style.display = "block";
+          outputDiv.textContent = "Processando...";
+
+          // Simular delay para visualização (em uma aplicação real, isso seria a chamada ao backend)
+          setTimeout(() => {
+            // Gerar resultado simulado com base no algoritmo selecionado
+            const resultado = simularBusca(origem, destino, algoritmo, limite);
+            outputDiv.textContent = resultado.output;
+
+            // Desenhar o caminho no mapa
+            desenharCaminho(resultado.caminho);
+
+            loadingDiv.style.display = "none";
+          }, 1000);
+        });
+      });
+
+      // Função para desenhar o mapa com as cidades e conexões
+      function desenharMapa() {
+        const mapDiv = document.getElementById("map");
+        mapDiv.innerHTML = ""; // Limpar o mapa
+
+        const coordenadasNormalizadas = normalizarCoordenadas();
+
+        // Desenhar todas as conexões primeiro (para ficarem abaixo das cidades)
+        for (const origem in grafo) {
+          const [x1, y1] = coordenadasNormalizadas[origem];
+
+          for (const destino in grafo[origem]) {
+            const [x2, y2] = coordenadasNormalizadas[destino];
+
+            // Calcular o comprimento e ângulo da linha
+            const length = Math.sqrt(
+              Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)
+            );
+            const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+
+            // Criar a linha
+            const line = document.createElement("div");
+            line.className = "path-line";
+            line.style.width = `${length}px`;
+            line.style.left = `${x1}px`;
+            line.style.top = `${y1}px`;
+            line.style.transform = `rotate(${angle}deg)`;
+            line.style.backgroundColor = "#ccc"; // Linhas normais são cinza
+
+            // Adicionar a distância como tooltip
+            line.title = `${origem} → ${destino}: ${grafo[origem][destino]} km`;
+
+            mapDiv.appendChild(line);
+          }
+        }
+
+        // Depois, desenhar todas as cidades
+        for (const cidade in coordenadasNormalizadas) {
+          const [x, y] = coordenadasNormalizadas[cidade];
+
+          // Criar o ponto
+          const point = document.createElement("div");
+          point.className = "city";
+          point.style.left = `${x}px`;
+          point.style.top = `${y}px`;
+          point.id = `city-${cidade}`;
+
+          // Criar o rótulo
+          const label = document.createElement("div");
+          label.className = "city-label";
+          label.textContent = cidade;
+          label.style.left = `${x}px`;
+          label.style.top = `${y}px`;
+
+          mapDiv.appendChild(point);
+          mapDiv.appendChild(label);
+        }
+      }
+
+      // Função para desenhar o caminho no mapa
+      function desenharCaminho(caminho) {
+        // Resetar o mapa
+        desenharMapa();
+
+        if (!caminho || caminho.length < 2) return;
+
+        const coordenadasNormalizadas = normalizarCoordenadas();
+        const mapDiv = document.getElementById("map");
+
+        // Destacar as cidades no caminho
+        caminho.forEach((cidade) => {
+          const cityElement = document.getElementById(`city-${cidade}`);
+          if (cityElement) {
+            cityElement.style.backgroundColor = "#3498db";
+            cityElement.style.width = "14px";
+            cityElement.style.height = "14px";
+            cityElement.style.zIndex = "10";
+          }
+        });
+
+        // Destacar o primeiro e o último como origem e destino
+        const origem = document.getElementById(`city-${caminho[0]}`);
+        const destino = document.getElementById(
+          `city-${caminho[caminho.length - 1]}`
+        );
+
+        if (origem) {
+          origem.style.backgroundColor = "green";
+          origem.style.width = "16px";
+          origem.style.height = "16px";
+        }
+
+        if (destino) {
+          destino.style.backgroundColor = "red";
+          destino.style.width = "16px";
+          destino.style.height = "16px";
+        }
+
+        // Desenhar as linhas do caminho
+        for (let i = 0; i < caminho.length - 1; i++) {
+          const atual = caminho[i];
+          const proximo = caminho[i + 1];
+
+          const [x1, y1] = coordenadasNormalizadas[atual];
+          const [x2, y2] = coordenadasNormalizadas[proximo];
+
+          // Calcular o comprimento e ângulo da linha
+          const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+          const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+
+          // Criar a linha
+          const line = document.createElement("div");
+          line.className = "path-line";
+          line.style.width = `${length}px`;
+          line.style.left = `${x1}px`;
+          line.style.top = `${y1}px`;
+          line.style.transform = `rotate(${angle}deg)`;
+          line.style.backgroundColor = "#3498db"; // Azul para o caminho
+          line.style.height = "5px"; // Mais espessa
+          line.style.zIndex = "5";
+
+          // Adicionar a distância como tooltip
+          line.title = `${atual} → ${proximo}: ${grafo[atual][proximo]} km`;
+
+          mapDiv.appendChild(line);
+        }
+      }
+
+      // Função auxiliar para calcular distância euclidiana
+      function distanciaEuclidiana(cidade1, cidade2) {
+        // Verificar se as coordenadas existem
+        if (!coordenadas[cidade1] || !coordenadas[cidade2]) {
+          console.error(
+            `Coordenadas não encontradas para ${cidade1} ou ${cidade2}`
+          );
+          return 9999; // Valor alto para evitar este caminho
+        }
+
+        const [x1, y1] = coordenadas[cidade1];
+        const [x2, y2] = coordenadas[cidade2];
+
+        // Calcular distância euclidiana
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+      // Função para simular busca usando diferentes algoritmos
+      function simularBusca(origem, destino, algoritmo, limite) {
+        let output = "";
+        let caminho = [];
+
+        const resultados = {
+          1: buscaEmExtensao(origem, destino), // Busca em Extensão
+          2: buscaDeCustoUniforme(origem, destino), // Custo Uniforme
+          3: buscaEmProfundidade(origem, destino), // Busca em Profundidade
+          4: buscaEmProfundidadeLimitada(origem, destino, limite), // Profundidade Limitada
+          5: buscaDeAprofundamentoIterativo(origem, destino), // Aprofundamento Iterativo
+          7: buscaGulosa(origem, destino), // Busca Gulosa
+          8: algoritmoA(origem, destino), // Algoritmo A*
+          9: algoritmoA(origem, destino), // Algoritmo A* (repetido para compatibilidade)
+        };
+
+        caminho = resultados[algoritmo] || null;
+
+        if (!caminho || caminho.length === 0) {
+          output = `Nenhum caminho encontrado de ${origem} para ${destino} usando o algoritmo ${algoritmo}.`;
+          return { output, caminho: null };
+        }
+
+        // Calcular o custo total
+        let custoTotal = 0;
+        for (let i = 0; i < caminho.length - 1; i++) {
+          custoTotal += grafo[caminho[i]][caminho[i + 1]];
+        }
+
+        const nomeAlgoritmo =
+          document.getElementById("algoritmo").options[
+            document.getElementById("algoritmo").selectedIndex
+          ].text;
+
+        output = `=== ${nomeAlgoritmo} ===\n\n`;
+        output += `Caminho encontrado: ${caminho.join(" → ")}\n`;
+        output += `Custo total: ${custoTotal} km\n`;
+        output += `Número de cidades no caminho: ${caminho.length}\n`;
+        output += `Tempo de execução simulado: 0.012345 segundos\n\n`;
+        output += "Detalhes da exploração:\n";
+
+        for (let i = 0; i < caminho.length - 1; i++) {
+          const atual = caminho[i];
+          const proximo = caminho[i + 1];
+          const custo = grafo[atual][proximo];
+
+          output += `Explorando: ${atual} → ${proximo} (Custo: ${custo}`;
+          if (algoritmo === "6" || algoritmo === "8") {
+            const h = Math.round(distanciaEuclidiana(proximo, destino));
+            output += `, Heurística: ${h}`;
+            if (algoritmo === "8") {
+              output += `, Total: ${custo + h}`;
+            }
+          }
+          output += ")\n";
+        }
+
+        return { output, caminho };
+      }
+
+      // Implementação das buscas
+      // Busca em Extensão (Amplitude)
+      function buscaEmExtensao(origem, destino) {
+        const visitados = new Set();
+        const fila = [{ cidade: origem, caminho: [origem] }];
+
+        while (fila.length > 0) {
+          const { cidade, caminho } = fila.shift();
+
+          if (cidade === destino) {
+            return caminho;
+          }
+
+          if (!visitados.has(cidade)) {
+            visitados.add(cidade);
+
+            for (const vizinho in grafo[cidade]) {
+              if (!visitados.has(vizinho)) {
+                fila.push({ cidade: vizinho, caminho: [...caminho, vizinho] });
+              }
+            }
+          }
+        }
+        return null;
+      }
+      //Busca em Profundidade
+      function buscaEmProfundidade(origem, destino) {
+        // Conjuntos e arrays para controle
+        const visitados = new Set();
+        const pilha = [
+          {
+            cidade: origem,
+            caminho: [origem],
+          },
+        ];
+
+        // Enquanto houver cidades para explorar na pilha
+        while (pilha.length > 0) {
+          // Remove o último elemento da pilha (característica da DFS)
+          const { cidade, caminho } = pilha.pop();
+
+          // Se encontrou o destino, retorna o resultado
+          if (cidade === destino) {
+            return caminho;
+          }
+
+          // Se já visitou esta cidade, ignora
+          if (visitados.has(cidade)) {
+            continue;
+          }
+
+          // Marca a cidade como visitada
+          visitados.add(cidade);
+
+          // Para cada vizinho da cidade atual
+          const vizinhos = grafo[cidade] || {};
+
+          // Adiciona os vizinhos não visitados à pilha
+          const vizinhosArray = Object.keys(vizinhos);
+
+          for (let i = vizinhosArray.length - 1; i >= 0; i--) {
+            const vizinho = vizinhosArray[i];
+
+            // Se já visitou, ignora
+            if (visitados.has(vizinho)) {
+              continue;
+            }
+
+            // Adiciona à pilha
+            pilha.push({
+              cidade: vizinho,
+              caminho: [...caminho, vizinho],
+            });
+          }
+        }
+
+        // Se chegou aqui, não encontrou um caminho
+        return null;
+      }
+//Busca em Profundidade Limitada
+
+      function buscaEmProfundidadeLimitada(origem, destino, limite) {
+        function dfsLimitada(cidade, caminho, visitados, profundidade) {
+          if (cidade === destino) return caminho;
+
+          if (profundidade >= limite) return null;
+
+          visitados.add(cidade);
+
+          for (const vizinho in grafo[cidade]) {
+            if (!visitados.has(vizinho)) {
+              const resultado = dfsLimitada(
+                vizinho,
+                [...caminho, vizinho],
+                visitados,
+                profundidade + 1
+              );
+              if (resultado) return resultado;
+            }
+          }
+          return null;
+        }
+
+        return dfsLimitada(origem, [origem], new Set(), 0);
+      }
+
+      //Busca de Aprofundamento Iterativo
+
+      function buscaDeAprofundamentoIterativo(origem, destino) {
+        let profundidade = 0;
+        let resultado = null;
+
+        while (!resultado) {
+          resultado = buscaEmProfundidadeLimitada(
+            origem,
+            destino,
+            profundidade
+          );
+          profundidade++;
+        }
+        return resultado;
+      }
+
+      //Busca de Custo Uniforme
+      
+      function buscaDeCustoUniforme(origem, destino) {
+        const visitados = new Set();
+        const fila = [{ cidade: origem, caminho: [origem], custo: 0 }];
+
+        while (fila.length > 0) {
+          fila.sort((a, b) => a.custo - b.custo);
+          const { cidade, caminho, custo } = fila.shift();
+
+          if (cidade === destino) {
+            return caminho;
+          }
+
+          if (!visitados.has(cidade)) {
+            visitados.add(cidade);
+
+            for (const vizinho in grafo[cidade]) {
+              if (!visitados.has(vizinho)) {
+                fila.push({
+                  cidade: vizinho,
+                  caminho: [...caminho, vizinho],
+                  custo: custo + grafo[cidade][vizinho],
+                });
+              }
+            }
+          }
+        }
+        return null;
+      }
+      function buscaGulosa(origem, destino) {
+        // Caso trivial
+        if (origem === destino) return [origem];
+
+        // Conjunto de nós visitados
+        const visitados = new Set();
+
+        // Fila de prioridade (array que será ordenado a cada iteração)
+        let fila = [
+          {
+            cidade: origem,
+            caminho: [origem],
+            heuristica: distanciaEuclidiana(origem, destino),
+          },
+        ];
+
+        // Enquanto houver nós para explorar
+        while (fila.length > 0) {
+          // Ordenar pelo valor heurístico (menor primeiro)
+          fila.sort((a, b) => a.heuristica - b.heuristica);
+
+          // Pegar o nó com menor valor heurístico
+          const atual = fila.shift();
+          const cidadeAtual = atual.cidade;
+
+          // Se já foi visitado, pular
+          if (visitados.has(cidadeAtual)) continue;
+
+          // Marcar como visitado
+          visitados.add(cidadeAtual);
+
+          // Verificar se é o destino
+          if (cidadeAtual === destino) {
+            return atual.caminho;
+          }
+
+          // Para cada vizinho não visitado
+          for (const vizinho in grafo[cidadeAtual]) {
+            if (!visitados.has(vizinho)) {
+              // Calcular heurística (distância direta ao destino)
+              let h;
+              try {
+                h = distanciaEuclidiana(vizinho, destino);
+                if (isNaN(h) || !isFinite(h)) {
+                  // Usar valor alternativo se a heurística for inválida
+                  console.warn(
+                    `Heurística inválida para ${vizinho}, usando valor padrão`
+                  );
+                  h = 1000; // Valor alto padrão
+                }
+              } catch (e) {
+                console.error(`Erro ao calcular heurística: ${e}`);
+                h = 1000; // Valor alto padrão
+              }
+
+              // Adicionar à fila
+              fila.push({
+                cidade: vizinho,
+                caminho: [...atual.caminho, vizinho],
+                heuristica: h,
+              });
+            }
+          }
+        }
+
+        // Se não encontrou caminho
+        return null;
+      }
+
+      function algoritmoA(origem, destino) {
+        const visitados = new Set();
+        const fila = [
+          {
+            cidade: origem,
+            caminho: [origem],
+            custo: 0,
+            heuristica: distanciaEuclidiana(origem, destino),
+          },
+        ];
+
+        while (fila.length > 0) {
+          fila.sort(
+            (a, b) => a.custo + a.heuristica - (b.custo + b.heuristica)
+          );
+          const { cidade, caminho, custo } = fila.shift();
+
+          if (cidade === destino) {
+            return caminho;
+          }
+
+          if (!visitados.has(cidade)) {
+            visitados.add(cidade);
+
+            for (const vizinho in grafo[cidade]) {
+              if (!visitados.has(vizinho)) {
+                fila.push({
+                  cidade: vizinho,
+                  caminho: [...caminho, vizinho],
+                  custo: custo + grafo[cidade][vizinho],
+                  heuristica: distanciaEuclidiana(vizinho, destino),
+                });
+              }
+            }
+          }
+        }
+        return null;
+      }
+    </script>
+  </body>
+</html>
